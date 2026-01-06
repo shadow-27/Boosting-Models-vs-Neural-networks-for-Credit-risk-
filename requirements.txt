@@ -1,0 +1,23 @@
+## Minimal requirements for the notebooks in this repo
+
+# Core
+numpy>=2.0
+pandas>=2.0
+
+# Modeling + metrics
+scikit-learn>=1.3
+
+# Neural networks (used in notebooks/02_neural_networks.ipynb)
+tensorflow>=2.20
+
+# Plotting
+matplotlib>=3.7
+seaborn>=0.12
+
+# Running notebooks (VS Code / Jupyter kernel)
+ipykernel>=6.0
+
+# Optional (only if/when boosting is added)
+# xgboost
+# lightgbm
+# catboost

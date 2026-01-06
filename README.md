@@ -1,6 +1,10 @@
 # Boosting Models vs Neural Networks for Credit Risk Prediction
 
-A comprehensive comparative analysis of gradient boosting models (XGBoost, LightGBM, CatBoost) and deep neural networks for predicting vehicle loan defaults.
+This project compares **neural-network models** against **boosting models** for predicting vehicle loan defaults. The repo is organized around a simple, collaboration-friendly workflow:
+
+- A shared processed dataset in `data/processed/`
+- A shared split file in `data/splits/`
+- Notebook-driven training and evaluation
 
 ## 📋 Table of Contents
 
@@ -29,6 +33,8 @@ This project evaluates and compares the performance of traditional gradient boos
 
 The project uses a **Vehicle Loan Default Dataset** containing historical information about borrowers and their loan repayment behavior.
 
+**Source**: https://www.kaggle.com/code/vineetverma/vehicle-loan-default-prediction/input
+
 ### Dataset Features
 
 Typical features include:
@@ -42,11 +48,17 @@ Typical features include:
 
 - **Binary Classification**: Default (1) vs Non-Default (0)
 
+### Important Note
+
+`data/test.csv` is **unlabeled** (no `LOAN_DEFAULT`). For model evaluation we create a labeled holdout split from `data/train.csv` and store it in `data/splits/split_uniqueid.csv`.
+
 ### Data Statistics
 
-- **Size**: TBD (To be updated with actual dataset)
-- **Features**: TBD
-- **Class Distribution**: Typically imbalanced (minority defaults)
+- **Train size**: 233,154 rows
+- **Columns**: 41 (40 features + `LOAN_DEFAULT`)
+- **Class distribution**: imbalanced
+   - Defaults (`LOAN_DEFAULT=1`): 50,611 (~21.71%)
+   - Non-defaults (`LOAN_DEFAULT=0`): 182,543 (~78.29%)
 
 ## 🤖 Models Compared
 
@@ -69,45 +81,35 @@ Typical features include:
 
 ### Neural Network Models
 
-1. **Feedforward Neural Network (FNN)**
+1. **Baseline MLP (Feedforward NN)**
    - Multi-layer perceptron architecture
    - ReLU activation functions
    - Dropout for regularization
 
-2. **Deep Neural Network (DNN)**
-   - Deeper architecture with multiple hidden layers
+2. **Improved MLP**
+   - Deeper architecture vs baseline
    - Batch normalization
-   - Advanced optimization techniques
+   - Regularization (dropout / weight decay)
 
 ## 📁 Project Structure
 
 ```
 .
 ├── data/
-│   ├── raw/                    # Original dataset
-│   ├── processed/              # Cleaned and preprocessed data
-│   └── splits/                 # Train/validation/test splits
+│   ├── train.csv                # Labeled training data (includes LOAN_DEFAULT)
+│   ├── test.csv                 # Unlabeled data (no LOAN_DEFAULT)
+│   ├── processed/
+│   │   └── loan_processed.csv   # Shared processed dataset (from notebook)
+│   └── splits/
+│       └── split_uniqueid.csv   # Shared split mapping by UNIQUEID
 ├── notebooks/
-│   ├── 01_data_exploration.ipynb
-│   ├── 02_data_preprocessing.ipynb
-│   ├── 03_boosting_models.ipynb
-│   ├── 04_neural_networks.ipynb
-│   └── 05_model_comparison.ipynb
-├── src/
-│   ├── data/
-│   │   ├── load_data.py
-│   │   └── preprocess.py
-│   ├── models/
-│   │   ├── boosting_models.py
-│   │   └── neural_networks.py
-│   ├── evaluation/
-│   │   └── metrics.py
-│   └── utils/
-│       └── helpers.py
+│   ├── 01_preprocessing.ipynb   # Creates loan_processed.csv + split_uniqueid.csv
+│   ├── 02_neural_networks.ipynb # Trains baseline + improved MLP; exports predictions
+│   └── 04_model_comparison.ipynb# Compares NN models; boosting optional later
 ├── models/                     # Saved model files
 ├── results/
-│   ├── figures/               # Visualizations
-│   └── reports/               # Performance reports
+│   ├── nn_baseline_test_preds.csv
+│   └── nn_improved_test_preds.csv
 ├── requirements.txt
 ├── LICENSE
 └── README.md
@@ -128,10 +130,11 @@ Typical features include:
    cd Boosting-Models-vs-Neural-networks-for-Credit-risk-
    ```
 
-2. **Create a virtual environment** (optional but recommended)
+2. **Create a virtual environment** (recommended)
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   python -m venv .venv
+   # Windows PowerShell:
+   .\.venv\Scripts\Activate.ps1
    ```
 
 3. **Install dependencies**
@@ -139,96 +142,45 @@ Typical features include:
    pip install -r requirements.txt
    ```
 
-### Required Libraries
-
-```
-numpy>=1.21.0
-pandas>=1.3.0
-scikit-learn>=1.0.0
-xgboost>=1.5.0
-lightgbm>=3.3.0
-catboost>=1.0.0
-tensorflow>=2.8.0  # or pytorch>=1.10.0
-matplotlib>=3.4.0
-seaborn>=0.11.0
-jupyter>=1.0.0
-```
+Boosting libraries (e.g., XGBoost/LightGBM/CatBoost) are **optional** and can be installed separately if/when needed.
 
 ## 💻 Usage
 
-### Data Preprocessing
+This repo is notebook-driven. Run the notebooks in this order:
 
-```python
-from src.data.load_data import load_dataset
-from src.data.preprocess import preprocess_data
+1. **Preprocess + create split**: `notebooks/01_preprocessing.ipynb`
+   - Outputs:
+     - `data/processed/loan_processed.csv`
+     - `data/splits/split_uniqueid.csv`
 
-# Load data
-df = load_dataset('data/raw/loan_data.csv')
+2. **Train neural nets + export predictions**: `notebooks/02_neural_networks.ipynb`
+   - Trains a baseline MLP and an improved MLP
+   - Exports prediction files to `results/` (expected columns: `UNIQUEID`, `y_true`, `y_prob`)
 
-# Preprocess
-X_train, X_test, y_train, y_test = preprocess_data(df)
-```
-
-### Training Boosting Models
-
-```python
-from src.models.boosting_models import train_xgboost, train_lightgbm, train_catboost
-
-# Train XGBoost
-xgb_model = train_xgboost(X_train, y_train)
-
-# Train LightGBM
-lgb_model = train_lightgbm(X_train, y_train)
-
-# Train CatBoost
-cat_model = train_catboost(X_train, y_train)
-```
-
-### Training Neural Networks
-
-```python
-from src.models.neural_networks import build_fnn, build_dnn
-
-# Build and train FNN
-fnn_model = build_fnn(input_dim=X_train.shape[1])
-fnn_model.fit(X_train, y_train, epochs=50, batch_size=32)
-
-# Build and train DNN
-dnn_model = build_dnn(input_dim=X_train.shape[1])
-dnn_model.fit(X_train, y_train, epochs=100, batch_size=64)
-```
-
-### Model Evaluation
-
-```python
-from src.evaluation.metrics import evaluate_model
-
-# Evaluate all models
-for model_name, model in models.items():
-    metrics = evaluate_model(model, X_test, y_test)
-    print(f"{model_name}: {metrics}")
-```
+3. **Compare models (NN-only by default)**: `notebooks/04_model_comparison.ipynb`
+   - Compares baseline vs improved MLP
+   - Boosting is intentionally **optional**: set `USE_BOOST = True` once there is  boosting models and results added in `results/boosting_best_test_preds.csv`
 
 ## 📈 Results
 
 ### Performance Comparison
 
-| Model | Accuracy | Precision | Recall | F1-Score | AUC-ROC | Training Time |
-|-------|----------|-----------|--------|----------|---------|---------------|
-| XGBoost | TBD | TBD | TBD | TBD | TBD | TBD |
-| LightGBM | TBD | TBD | TBD | TBD | TBD | TBD |
-| CatBoost | TBD | TBD | TBD | TBD | TBD | TBD |
-| FNN | TBD | TBD | TBD | TBD | TBD | TBD |
-| DNN | TBD | TBD | TBD | TBD | TBD | TBD |
+Metrics below are computed on the labeled holdout set (from `data/splits/split_uniqueid.csv`). Precision/Recall/F1 are reported at a common threshold **t = 0.50**.
 
-*Note: Results will be updated after model training and evaluation*
+| Model | AUC-ROC | Precision@0.50 | Recall@0.50 | F1@0.50 |
+|-------|--------:|---------------:|------------:|--------:|
+| Baseline MLP | 0.650593 | 0.290820 | 0.668862 | 0.405381 |
+| Improved MLP | 0.648562 | 0.294045 | 0.626976 | 0.400336 |
+| XGBoost | TBD | TBD | TBD | TBD |
+| LightGBM | TBD | TBD | TBD | TBD |
+| CatBoost | TBD | TBD | TBD | TBD |
+
+*Note: Run `notebooks/04_model_comparison.ipynb` to generate the latest metrics + ROC plot.*
 
 ### Key Findings
 
-- **Best Overall Performance**: TBD
-- **Fastest Training**: TBD
-- **Most Interpretable**: TBD
-- **Best for Imbalanced Data**: TBD
+- **Best NN (AUC-ROC / F1@0.50)**: Baseline MLP (slightly higher than Improved MLP on this split)
+- **Boosting comparison**: TBD (to be added once boosting predictions are available)
 
 ## 📊 Evaluation Metrics
 
@@ -242,17 +194,6 @@ The models are evaluated using the following metrics:
 - **Confusion Matrix**: Detailed breakdown of predictions
 - **Feature Importance**: Most influential features (for tree-based models)
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
-
-### Guidelines
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
 
 ## 📄 License
 
@@ -260,13 +201,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ## 🙏 Acknowledgments
 
-- Dataset source: [To be added]
-- Inspiration from various credit risk modeling research papers
-- Open-source machine learning community
-
-## 📞 Contact
-
-For questions or suggestions, please open an issue in the repository.
+- Dataset source: https://www.kaggle.com/code/vineetverma/vehicle-loan-default-prediction/input
 
 ---
 
