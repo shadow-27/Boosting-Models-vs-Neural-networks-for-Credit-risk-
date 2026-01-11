@@ -17,7 +17,12 @@ seaborn>=0.12
 # Running notebooks (VS Code / Jupyter kernel)
 ipykernel>=6.0
 
-# Optional (only if/when boosting is added)
-# xgboost
-# lightgbm
-# catboost
+# Boosting
+xgboost>=1.7
+lightgbm>=4.0
+catboost>=1.2
+scipy>=1.11
+
+# Plotting
+matplotlib>=3.7
+seaborn>=0.12
