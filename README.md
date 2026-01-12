@@ -105,11 +105,15 @@ Typical features include:
 ├── notebooks/
 │   ├── 01_preprocessing.ipynb   # Creates loan_processed.csv + split_uniqueid.csv
 │   ├── 02_neural_networks.ipynb # Trains baseline + improved MLP; exports predictions
-│   └── 04_model_comparison.ipynb# Compares NN models; boosting optional later
+│   ├── 03_boosting.ipynb         # Trains boosting models; exports predictions
+│   └── 04_model_comparison_with_boosting.ipynb # Final comparison (boosting + NN)
 ├── models/                     # Saved model files
 ├── results/
 │   ├── nn_baseline_test_preds.csv
-│   └── nn_improved_test_preds.csv
+│   ├── nn_improved_test_preds.csv
+│   ├── boosting_xgb_test_preds.csv
+│   ├── lgbm_test_preds.csv
+│   └── boosting_cat_test_preds.csv
 ├── requirements.txt
 ├── LICENSE
 └── README.md
@@ -142,7 +146,11 @@ Typical features include:
    pip install -r requirements.txt
    ```
 
-Boosting libraries (e.g., XGBoost/LightGBM/CatBoost) are **optional** and can be installed separately if/when needed.
+Boosting libraries are installed separately (only needed for `notebooks/03_boosting.ipynb`):
+
+```bash
+pip install xgboost lightgbm catboost
+```
 
 ## 💻 Usage
 
@@ -157,42 +165,47 @@ This repo is notebook-driven. Run the notebooks in this order:
    - Trains a baseline MLP and an improved MLP
    - Exports prediction files to `results/` (expected columns: `UNIQUEID`, `y_true`, `y_prob`)
 
-3. **Compare models (NN-only by default)**: `notebooks/04_model_comparison.ipynb`
-   - Compares baseline vs improved MLP
-   - Boosting is intentionally **optional**: set `USE_BOOST = True` once there is  boosting models and results added in `results/boosting_best_test_preds.csv`
+3. **Train boosting models + export predictions**: `notebooks/03_boosting.ipynb`
+   - Trains boosting models (XGBoost / LightGBM / CatBoost)
+   - Exports prediction files to `results/` (expected columns: `UNIQUEID`, `y_true`, `y_prob`)
+
+4. **Final comparison (boosting + NN)**: `notebooks/04_model_comparison_with_boosting.ipynb`
+   - Loads the exported prediction CSVs for all models
+   - Produces a metrics table and ROC curve plots
 
 ## 📈 Results
 
 ### Performance Comparison
 
-Metrics below are computed on the labeled holdout set (from `data/splits/split_uniqueid.csv`). Precision/Recall/F1 are reported at a common threshold **t = 0.50**.
+Metrics below are computed on the labeled holdout set (from `data/splits/split_uniqueid.csv`). Threshold-based metrics are reported at a common threshold **t = 0.50**.
 
-| Model | AUC-ROC | Precision@0.50 | Recall@0.50 | F1@0.50 |
-|-------|--------:|---------------:|------------:|--------:|
-| Baseline MLP | 0.650593 | 0.290820 | 0.668862 | 0.405381 |
-| Improved MLP | 0.648562 | 0.294045 | 0.626976 | 0.400336 |
-| XGBoost | TBD | TBD | TBD | TBD |
-| LightGBM | TBD | TBD | TBD | TBD |
-| CatBoost | TBD | TBD | TBD | TBD |
+| Model | AUC-ROC | AUC-PR | Log Loss | Brier | Accuracy | Balanced Acc | Precision@0.50 | Recall@0.50 | Specificity@0.50 | F1@0.50 |
+|-------|--------:|-------:|---------:|------:|---------:|-------------:|---------------:|------------:|-----------------:|--------:|
+| Boosting - CatBoost | 0.666400 | 0.344419 | 0.493343 | 0.159949 | 0.783925 | 0.507541 | 0.568627 | 0.019099 | 0.995983 | 0.036957 |
+| Boosting - XGBoost | 0.666278 | 0.343337 | 0.493397 | 0.159987 | 0.783525 | 0.508142 | 0.534426 | 0.021470 | 0.994814 | 0.041281 |
+| Boosting - LightGBM | 0.665569 | 0.342976 | 0.493600 | 0.160064 | 0.783182 | 0.506828 | 0.516605 | 0.018440 | 0.995216 | 0.035610 |
+| NN - Baseline MLP | 0.650593 | 0.325208 | 0.654173 | 0.232047 | 0.574055 | 0.608315 | 0.290820 | 0.668862 | 0.547769 | 0.405381 |
+| NN - Improved MLP | 0.648562 | 0.323609 | 0.650185 | 0.229896 | 0.592269 | 0.604811 | 0.294045 | 0.626976 | 0.582646 | 0.400336 |
 
-*Note: Run `notebooks/04_model_comparison.ipynb` to generate the latest metrics + ROC plot.*
+Confusion-matrix counts (**t = 0.50**):
+
+| Model | TP | FP | TN | FN |
+|-------|---:|---:|---:|---:|
+| Boosting - CatBoost | 145 | 110 | 27272 | 7447 |
+| Boosting - XGBoost | 163 | 142 | 27240 | 7429 |
+| Boosting - LightGBM | 140 | 131 | 27251 | 7452 |
+| NN - Baseline MLP | 5078 | 12383 | 14999 | 2514 |
+| NN - Improved MLP | 4760 | 11428 | 15954 | 2832 |
+
+*Note: Run `notebooks/04_model_comparison_with_boosting.ipynb` to generate the latest metrics + ROC/PR plots.*
 
 ### Key Findings
 
-- **Best NN (AUC-ROC / F1@0.50)**: Baseline MLP (slightly higher than Improved MLP on this split)
-- **Boosting comparison**: TBD (to be added once boosting predictions are available)
+- **Best overall ranking (ROC-AUC / PR-AUC):** Boosting models lead, with **CatBoost** best ROC-AUC (**0.6664**) and best PR-AUC (**0.3444**) on this split.
+- **Best probability quality (Log Loss / Brier):** Boosting models are substantially better (Log Loss ~**0.493**, Brier ~**0.160**) than the MLPs (Log Loss ~**0.65**, Brier ~**0.23**).
+- **Best F1 at t = 0.50:** **NN - Baseline MLP** (**0.4054**).
+- **Threshold matters:** at **t = 0.50**, boosting models have very high precision but **very low recall (~2%)** because their predicted probabilities are rarely above 0.5. In practice, the operating threshold should be tuned on the validation set to match the business objective.
 
-## 📊 Evaluation Metrics
-
-The models are evaluated using the following metrics:
-
-- **Accuracy**: Overall correctness of predictions
-- **Precision**: Proportion of positive predictions that are correct
-- **Recall**: Proportion of actual positives correctly identified
-- **F1-Score**: Harmonic mean of precision and recall
-- **AUC-ROC**: Area under the receiver operating characteristic curve
-- **Confusion Matrix**: Detailed breakdown of predictions
-- **Feature Importance**: Most influential features (for tree-based models)
 
 
 ## 📄 License
